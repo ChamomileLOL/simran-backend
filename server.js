@@ -1,75 +1,67 @@
-require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-
-// NOTE: We do not need json-bigint if we treat everything as text/strings.
-// But if you installed it, we can leave the require or remove it.
-// To stay simple and safe, we will use standard logic with String handling.
+// We keep dotenv for local testing, but handle it if missing
+try { require('dotenv').config(); } catch (e) { console.log("Dotenv not found, skipping..."); }
 
 const app = express();
 
-// 1. CONFIGURATION
-// Render sets process.env.PORT. We MUST use it.
-const PORT = process.env.PORT || 3000;
-
-// 2. MIDDLEWARE
-app.use(express.text()); // Accept Raw Text
+// Middleware
+app.use(express.json());
 app.use(cors({
-    origin: "*", // ALLOW ALL (For debugging only. Secure this later.)
-    methods: ["GET", "POST"],
-    credentials: true
+    origin: "*" // Allow all origins for now to fix CORS issues
 }));
 
-// 3. DATABASE CONNECTION
-if (!mongoURI) {
-    console.error("CRITICAL ERROR: MONGO_URI is missing in Environment Variables!");
+// --- DATABASE CONNECTION ---
+// 1. Grab the URI from the Environment
+const connectionString = process.env.MONGO_URI;
+
+// 2. Check if it exists (Fixes the crash)
+if (!connectionString) {
+    console.error("❌ FATAL ERROR: MONGO_URI is missing in Environment Variables!");
+    process.exit(1); 
 }
 
-mongoose.connect(process.env.MONGO_URI)
+// 3. Connect
+mongoose.connect(connectionString)
     .then(() => console.log(">>> CONNECTED TO MONGODB (ATLAS)"))
-    .catch(err => console.error(">>> MONGODB CONNECTION ERROR:", err));
+    .catch((err) => console.error(">>> FAILED TO CONNECT TO MONGODB:", err));
 
-// 4. SCHEMA
-const SimranSchema = new mongoose.Schema({
+// --- THE SCHEMA ---
+const entitySchema = new mongoose.Schema({
+    value: String, // The ID you are typing
     name: String,
-    value: String, 
     status: String
 });
-const Entity = mongoose.model('Entity', SimranSchema);
 
-// 5. ROUTES
-app.get('/', (req, res) => {
-    res.send("THE SYSTEM IS ONLINE. THE TRUTH IS PRESERVED.");
-});
+// IMPORTANT: Point to the 'entities' collection explicitly
+const Entity = mongoose.model('Entity', entitySchema, 'entities');
 
+// --- THE DELETE ROUTE ---
 app.post('/delete-simran', async (req, res) => {
+    const { id } = req.body;
+    console.log("RECEIVED REQUEST BODY:", id); // Debug log
+
     try {
-        console.log("RECEIVED REQUEST BODY:", req.body);
-        
-        // Sanitize the input
-        const targetId = typeof req.body === 'string' ? req.body.trim() : "";
+        // Find and Delete based on the "value" field
+        const deletedEntity = await Entity.findOneAndDelete({ value: id });
 
-        if (!targetId) {
-            return res.status(400).send("ERROR: NO ID PROVIDED.");
-        }
-
-        const result = await Entity.deleteOne({ value: targetId });
-
-        if (result.deletedCount === 0) {
-            res.send("ID NOT FOUND. THE VOID IS EMPTY.");
+        if (deletedEntity) {
+            console.log("✅ DELETED:", deletedEntity);
+            res.json({ message: "FORM DELETED. ESSENCE REMAINS." });
         } else {
-            res.send("FORM DELETED. ESSENCE REMAINS. (Operation Successful)");
+            console.log("⚠️ ID NOT FOUND IN DB:", id);
+            res.status(404).json({ message: "ID NOT FOUND. THE VOID IS EMPTY." });
         }
     } catch (error) {
-        console.error("DELETE ERROR:", error);
-        res.status(500).send("ERROR IN THE VOID: " + error.message);
+        console.error("SERVER ERROR:", error);
+        res.status(500).json({ message: "INTERNAL SERVER ERROR" });
     }
 });
 
-// 6. START THE SERVER (The Critical Step)
-// We bind to '0.0.0.0' to ensure Render can see us.
-app.listen(PORT, '0.0.0.0', () => {
+// --- SERVER START ---
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => {
     console.log(`>>> SERVER STARTING...`);
     console.log(`>>> LISTENING ON PORT ${PORT}`);
 });
