@@ -38,23 +38,26 @@ app.get('/', (req, res) => {
 });
 
 // 5. THE 'DELETE' ROUTE (The Paradox Resolution)
-// This executes 'Simranless of Simran'
 app.post('/delete-simran', async (req, res) => {
     try {
-        // We do not delete. We transcend.
-        // Logic: Delete the specific form, acknowledge the essence.
-        const { targetId } = JSONbig.parse(req.body); 
+        // CORRECTION: The Frontend sends Raw Text, not JSON.
+        // We do not need to parse it or destructure it.
+        // We just grab the body as the ID.
+        const targetId = req.body.trim(); 
         
-        // Actual Database Action
-        await Entity.deleteOne({ value: targetId.toString() });
+        console.log("Attempting to delete ID:", targetId); // Debugging Log
 
-        res.send("FORM DELETED. ESSENCE REMAINS. (Operation Successful)");
+        // Actual Database Action
+        // We search for the 'value' field which matches our ID string
+        const result = await Entity.deleteOne({ value: targetId });
+
+        if (result.deletedCount === 0) {
+            res.send("ID NOT FOUND. THE VOID IS EMPTY.");
+        } else {
+            res.send("FORM DELETED. ESSENCE REMAINS. (Operation Successful)");
+        }
     } catch (error) {
+        console.error(error); // See the error in Render Logs
         res.status(500).send("ERROR IN THE VOID: " + error.message);
     }
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Server running on Port ${PORT}`);
 });
