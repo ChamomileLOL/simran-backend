@@ -22,12 +22,11 @@ app.use(cors({
 }));
 
 // 3. DATABASE CONNECTION
-const mongoURI = process.env.MONGO_URI;
 if (!mongoURI) {
     console.error("CRITICAL ERROR: MONGO_URI is missing in Environment Variables!");
 }
 
-mongoose.connect(mongoURI)
+mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log(">>> CONNECTED TO MONGODB (ATLAS)"))
     .catch(err => console.error(">>> MONGODB CONNECTION ERROR:", err));
 
