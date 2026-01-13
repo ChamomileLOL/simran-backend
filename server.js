@@ -9,7 +9,7 @@ const app = express();
 // 1. INBOUND STRATEGY: Accept Raw Text to protect the 16th Digit
 app.use(express.text()); 
 app.use(cors({
-    origin: ["https://project-simran-frontend.vercel.app", "http://localhost:5173"]
+    origin: ["https://simran-frontend.vercel.app/", "http://localhost:5173"]
 }));
 
 // 2. THE DATABASE CONNECTION (The Vault)
